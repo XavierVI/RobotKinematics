@@ -1,5 +1,7 @@
 #include <iostream>
 #include <Eigen/Dense>
+#include <cmath>
+#include <numbers>
 
 /**
  * This file is used to write code to help solidify concepts from the
@@ -12,7 +14,7 @@ class PlanarRigidBody {
 
   private:
     Eigen::Matrix2d space_frame;
-    Eigen::Matrix2d body_frame;
+    // Eigen::Matrix2d body_frame;
 
     // orientation and position of the body frame wrt the space frame
     Eigen::Matrix2d P;
@@ -39,9 +41,12 @@ int main(int argc, char* argv[]) {
     {0, 1}
   };
 
+  double theta = std::numbers::pi / 2;
+
   // orientation of {b} wrt {s}
   Eigen::Matrix2d P {
-    {}
+    {std::cos(std::numbers::pi / 2), -std::sin(std::numbers::pi / 2)},
+    {std::sin(std::numbers::pi / 2), std::cos(std::numbers::pi / 2)}
   };
 
   Eigen::Vector2d p {0, 0};
