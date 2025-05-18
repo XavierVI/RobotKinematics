@@ -19,10 +19,15 @@ class PlanarRigidBody {
     // orientation and position of the body frame wrt the space frame
     Eigen::Matrix2d P;
     Eigen::Vector2d p;
-    int i;
+
+    Eigen::Vector3d screw_axis;
 
   public:
-    PlanarRigidBody(Eigen::Matrix2d P, Eigen::Vector2d p) {
+    PlanarRigidBody(
+      Eigen::Matrix2d P,
+      Eigen::Vector2d p,
+      Eigen::Vector3d screw_axis
+    ) {
       space_frame = Eigen::Matrix2d {
         {1, 0},
         {0, 1}
@@ -30,6 +35,7 @@ class PlanarRigidBody {
 
       this->P = P;
       this->p = p;
+      this->screw_axis = screw_axis;
     }
 };
 
@@ -41,15 +47,19 @@ int main(int argc, char* argv[]) {
     {0, 1}
   };
 
-  double theta = std::numbers::pi / 2;
+  double theta = std::numbers::pi;
 
   // orientation of {b} wrt {s}
   Eigen::Matrix2d P {
-    {std::cos(std::numbers::pi / 2), -std::sin(std::numbers::pi / 2)},
-    {std::sin(std::numbers::pi / 2), std::cos(std::numbers::pi / 2)}
+    {std::cos(theta), -std::sin(theta)},
+    {std::sin(theta), std::cos(theta)}
   };
 
-  Eigen::Vector2d p {0, 0};
+  Eigen::Vector2d p {3, 1};
+
+  Eigen::Vector3d screw_axis {std::numbers::pi / 2, std::numbers::pi, 0};
+
+  PlanarRigidBody rigidBody (P, p, screw_axis);
 
   std::cout << s_frame << std::endl;
   return 0;
