@@ -1,0 +1,2 @@
+# About
+This is a small project for gaining a better understanding of the kinematics behind robot arms. It specifically will be used for learning the product of exponentials formulation for representing the coordinates of a robot arm.
