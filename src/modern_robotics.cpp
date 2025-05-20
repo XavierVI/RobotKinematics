@@ -19,13 +19,10 @@ class PlanarRigidBody {
     Eigen::Matrix2d R_sb;
     Eigen::Vector2d p;
 
-    Eigen::Vector3d screw_axis;
-
   public:
     PlanarRigidBody(
       Eigen::Matrix2d R_sb,
-      Eigen::Vector2d p,
-      Eigen::Vector3d screw_axis
+      Eigen::Vector2d p
     ) {
       space_frame = Eigen::Matrix2d {
         {1, 0},
@@ -34,7 +31,6 @@ class PlanarRigidBody {
 
       this->R_sb = R_sb;
       this->p = p;
-      this->screw_axis = screw_axis;
     }
 
     /**
@@ -64,22 +60,48 @@ class PlanarRigidBody {
 class RigidBody {
   /**
    * This class represents a three-dimensional rigid body.
+   * 
+   * The goal with this class is to better understand rotations which are
+   * using exponential coordinates. These rotations specifically use 
+   * Rodrigues' formula.
    */
 
   private:
-    // orientation of the body frame wrt the space frame
-    Eigen::Matrix3d R_sb;
     Eigen::Matrix3d space_frame;
+    Eigen::Matrix3d body_frame;
 
   public:
-    RigidBody() {
-      this->space_frame {
+    RigidBody(Eigen::Matrix3d body_frame) {
+      this->space_frame = Eigen::Matrix3d {
         {1, 0, 0},
         {0, 1, 0},
         {0, 0, 1}
-      }
+      };
 
+      this->body_frame = body_frame;
+    }
 
+    /**
+     * This method uses Rodrigues' formula to rotate the body frame
+     * about an axis defined in the space frame. */
+    void move_rigid_body(Eigen::Vector3d axis, double theta) {
+      // forming the skew-symmetric representation of the axis
+      Eigen::Matrix3d skew_symm_mat {
+        {0,          -axis[2],   axis[1]},
+        {axis[2],    0,          axis[0]},
+        {-axis[1],   axis[0],    0}
+      };
+
+      Eigen::Matrix3d I {
+        {1,0,0},
+        {0,1,0},
+        {0,0,1}
+      };
+
+      Eigen::Matrix3d R = I + std::sin(theta)*skew_symm_mat 
+          + (1 - std::cos(theta))*skew_symm_mat*skew_symm_mat;
+
+        body_frame = R * body_frame;
     }
 };
 
@@ -102,9 +124,7 @@ int main(int argc, char* argv[]) {
 
   Eigen::Vector2d p {2, 2};
 
-  Eigen::Vector3d screw_axis {1, 2, 0};
-
-  PlanarRigidBody rigidBody (P, p, screw_axis);
+  PlanarRigidBody rigidBody (P, p);
 
   std::cout << "Before rotation\n";
 
