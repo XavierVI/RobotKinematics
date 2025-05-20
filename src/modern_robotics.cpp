@@ -61,6 +61,29 @@ class PlanarRigidBody {
     }
 };
 
+class RigidBody {
+  /**
+   * This class represents a three-dimensional rigid body.
+   */
+
+  private:
+    // orientation of the body frame wrt the space frame
+    Eigen::Matrix3d R_sb;
+    Eigen::Matrix3d space_frame;
+
+  public:
+    RigidBody() {
+      this->space_frame {
+        {1, 0, 0},
+        {0, 1, 0},
+        {0, 0, 1}
+      }
+
+
+    }
+};
+
+
 int main(int argc, char* argv[]) {
   // creating an example of exponential coordinates
   // space frame
