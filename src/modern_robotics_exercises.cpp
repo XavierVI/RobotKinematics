@@ -65,15 +65,19 @@ class RigidBody {
    */
 
   private:
-    Eigen::Matrix3d space_frame;
-    Eigen::Matrix3d body_frame;
+    // homogeneous transformation matrices
+    Eigen::Matrix4d space_frame;
+    Eigen::Matrix4d body_frame;
 
   public:
-    RigidBody(Eigen::Matrix3d body_frame) {
-      this->space_frame = Eigen::Matrix3d {
-        {1, 0, 0},
-        {0, 1, 0},
-        {0, 0, 1}
+    RigidBody(Eigen::Matrix4d body_frame) {
+      // constructing the transformation matrix
+      // for the space frame
+      this->space_frame = Eigen::Matrix4d {
+        {1, 0, 0, 0},
+        {0, 1, 0, 0},
+        {0, 0, 1, 0},
+        {0, 0, 0, 1}
       };
 
       this->body_frame = body_frame;
@@ -83,6 +87,7 @@ class RigidBody {
      * This method uses Rodrigues' formula to rotate the body frame
      * about an axis defined in the space frame. */
     void rotate_rigid_body(Eigen::Vector3d axis, double theta) {
+      Eigen::ArithmeticSequence seq = Eigen::seq(0, 2);
       // forming the skew-symmetric representation of the axis
       Eigen::Matrix3d skew_symm_mat {
         {0,          -axis[2],   axis[1]},
@@ -99,19 +104,19 @@ class RigidBody {
       Eigen::Matrix3d R = I + std::sin(theta)*skew_symm_mat 
           + (1 - std::cos(theta))*skew_symm_mat*skew_symm_mat;
 
-        body_frame = R * body_frame;
+        this->body_frame(seq, seq) = R * this->body_frame(seq, seq);
+    }
+
+    void print_body_frame() {
+      std::cout << this->body_frame << std::endl;
     }
 };
 
 
 int main(int argc, char* argv[]) {
-  // creating an example of exponential coordinates
-  // space frame
-  Eigen::Matrix2d s_frame {
-    {1, 0},
-    {0, 1}
-  };
-
+  //-----------------------------------------------
+  // Example of a rotation for a planar rigid-body
+  //-----------------------------------------------
   double theta = 0;
 
   // orientation of {b} wrt {s}
@@ -122,16 +127,44 @@ int main(int argc, char* argv[]) {
 
   Eigen::Vector2d p {2, 2};
 
-  PlanarRigidBody rigidBody (P, p);
+  PlanarRigidBody planarRigidBody (P, p);
 
   std::cout << "Before rotation\n";
 
-  rigidBody.print_body_frame_position();
+  planarRigidBody.print_body_frame_position();
 
   std::cout << "After rotation\n";
 
-  rigidBody.rotate_rigid_body(std::numbers::pi / 2);
-  rigidBody.print_body_frame_position();
+  planarRigidBody.rotate_rigid_body(std::numbers::pi / 2);
+  planarRigidBody.print_body_frame_position();
+
+  //-----------------------------------------------
+  // Example of a rotation for a rigid body in three
+  // dimensions, using exponential coordinates
+  //-----------------------------------------------
+  // initial position and orientation of the
+  // body frame represented as a transformation
+  // matrix
+  std::cout << "========================\n";
+  std::cout << "Three dimensions\n";
+
+  Eigen::Matrix4d T_sb {
+    {1, 0, 0, 2},
+    {0, 1, 0, 2},
+    {0, 0, 1, 0},
+    {0, 0, 0, 1}
+  };
+  theta = std::numbers::pi / 2;
+
+  std::cout << "Before\n";
+  std::cout << T_sb(Eigen::seq(0, 2), Eigen::seq(0, 2)) << std::endl;
+  
+  RigidBody rigidBody (T_sb);
+  Eigen::Vector3d axis {1, 0, 0};
+  rigidBody.rotate_rigid_body(axis, theta);
+  std::cout << "After\n";
+  rigidBody.print_body_frame();
+
 
   return 0;
 }
