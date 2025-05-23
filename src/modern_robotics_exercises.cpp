@@ -8,9 +8,7 @@
  * modern robotics textbook.
  *******************************************************************/
 
-
 class PlanarRigidBody {
-
   private:
     Eigen::Matrix2d space_frame;
     // Eigen::Matrix2d body_frame;
@@ -42,7 +40,7 @@ class PlanarRigidBody {
      * 
      * We compute R_sb' = R_sb * R_bb', yielding the new orientation of the {b} in {s}.
      * */
-    void move_rigid_body(double theta) {
+    void rotate_rigid_body(double theta) {
       Eigen::Matrix2d R_bb_prime {
         {std::cos(theta), -std::sin(theta)},
         {std::sin(theta), std::cos(theta)}
@@ -84,7 +82,7 @@ class RigidBody {
     /**
      * This method uses Rodrigues' formula to rotate the body frame
      * about an axis defined in the space frame. */
-    void move_rigid_body(Eigen::Vector3d axis, double theta) {
+    void rotate_rigid_body(Eigen::Vector3d axis, double theta) {
       // forming the skew-symmetric representation of the axis
       Eigen::Matrix3d skew_symm_mat {
         {0,          -axis[2],   axis[1]},
@@ -132,7 +130,7 @@ int main(int argc, char* argv[]) {
 
   std::cout << "After rotation\n";
 
-  rigidBody.move_rigid_body(std::numbers::pi / 2);
+  rigidBody.rotate_rigid_body(std::numbers::pi / 2);
   rigidBody.print_body_frame_position();
 
   return 0;

@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_PREFIX_PATH "/usr/local/include/" ${CMAKE_PREFIX_PATH})
 
-add_executable(modern_robotics src/modern_robotics.cpp)
+add_executable(modern_robotics_exercises src/modern_robotics_exercises.cpp)
 
-install(TARGETS modern_robotics DESTINATION ${PROJECT_SOURCE_DIR}/bin)
+install(TARGETS modern_robotics_exercises DESTINATION ${PROJECT_SOURCE_DIR}/bin)
 
