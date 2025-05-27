@@ -7,9 +7,54 @@ template <int J> class RobotArm {
     // we're going to represent each screw axis as
     // a row vector, which will make it easier to construct
     // the matrix representation
-    Eigen::Matrix<double, J, 6> Slist;
+    const Eigen::Matrix<double, J, 6> Slist;
     // this is the home configuration
     Eigen::Matrix4d M;
+
+    /**
+     * This method computes a matrix exponential using Slist and a
+     * given angle. It's pretty much a helper function for the
+     * methods which compute forward kinematics.
+     */
+    Eigen::Vector<double, 6> matrixExp6(int screw_axis_idx, double angle) {
+      Eigen::Matrix4d mat_exp = Eigen::Matrix4d::Identity();
+      Eigen::Vector6d S = Slist.row(screw_axis_idx);
+      
+      Eigen::Vector3d omega = S.head<3>();
+      Eigen::Vector3d v = S.tail<3>();
+
+      if (omega.norm() == 1) {
+        // computing the skew-symmetric representation
+        // of omega
+        Eigen::Matrix3d skew_symm_mat {
+          { 0,       -omega(2),  omega(1) },
+          { omega(2), 0,         -omega(0)},
+          {-omega(1), omega(0),  0        }
+        };
+
+        Eigen::Matrix3d skew_symm_mat_sr = skew_symm_mat * skew_symm_mat;
+
+        // compute the orientation
+        mat_exp.topLeftCorner<3, 3>() = 
+            Eigen::Matrix3d::Identity() 
+              + std::sin(angle) * skew_symm_mat
+              + (1 - std::cos(angle)) * skew_symm_mat_sr;
+
+        // compute the position
+        mat_exp.block<3, 1>(0, 3) = 
+            (
+              Eigen::Matrix3d::Identity()
+              + (1 - std::cos(angles[i])) * skew_symm_mat
+              + (angles[i] - std::sin(angle)) * skew_symm_mat_sr
+            ) * v;
+      }
+
+      else if (omega.norm() == 0) {
+        mat_exp.block<3, 1>(0, 3) = v * angle;
+      }
+
+      return mat_exp;
+    }
 
   public:
     RobotArm(Eigen::Matrix4d M, Eigen::Matrix<double, J, 6> Slist) 
@@ -25,27 +70,9 @@ template <int J> class RobotArm {
      */
     Eigen::Matrix4d forwardKinSpace(Eigen::Vector<double, J> angles) {
       Eigen::Matrix4d T_sb = M;
-      Eigen::ArithmeticSequence seq = Eigen::seq(0, 2);
 
       for (int i = J - 1; i >= 0; i--) {
-        // update the rotational component
-        Eigen::Matrix3d skew_symm {
-          {0, -Slist[i, 2], Slist[i, 1]},
-          {Slist[i, 2], 0, -Slist[i, 0]},
-          {-Slist[i, 1], Slist[i, 0], 0}
-        };
-
-        T_sb(seq, seq) = 
-            Eigen::Matrix3d::Identity() 
-              + std::cos(angles[i])*skew_symm 
-              + (1 - std::cos(angles[i]))*skew_symm*skew_symm;
-
-        // update the position
-        T_sb(seq, 3) = 
-            (Eigen::Matrix3d::Identity()
-              + (1 - std::cos(angles[i]))*skew_symm
-              + (angles[i] - std::sin(angles[i]))*skew_symm*skew_symm
-            )*Slist(2, 6);
+        
       }
 
       return T_sb;
