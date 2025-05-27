@@ -1,8 +1,8 @@
 #include <Eigen/Dense>
+#include <iostream>
 
 // J is the number of joints
-template <int J>
-class RobotArm {
+template <int J> class RobotArm {
   private:
     // we're going to represent each screw axis as
     // a row vector, which will make it easier to construct
@@ -11,14 +11,17 @@ class RobotArm {
     // this is the home configuration
     Eigen::Matrix4d M;
 
-    public:
-      RobotArm(Eigen::Matrix4d M, Eigen::Matrix<double, J, 6>);
+  public:
+    RobotArm(Eigen::Matrix4d M, Eigen::Matrix<double, J, 6> Slist) 
+      : M(M), Slist(Slist) {}
 
-      void forwardSpaceKin();
+    void forwardSpaceKin() {}
 
-      void forwardBodyKin();
+    void forwardBodyKin() {}
 
-      void inverseSpaceKin();
+    void inverseSpaceKin() {}
 
-      void inverseBodyKin();
+    void inverseBodyKin() {}
+
+    void printSlist() {}
 };
