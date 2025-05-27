@@ -160,7 +160,7 @@ int main(int argc, char* argv[]) {
   std::cout << T_sb(Eigen::seq(0, 2), Eigen::seq(0, 2)) << std::endl;
   
   RigidBody rigidBody (T_sb);
-  Eigen::Vector3d axis {1, 0, 0};
+  Eigen::Vector3d axis {0, 0, 1};
   rigidBody.rotate_rigid_body(axis, theta);
   std::cout << "After\n";
   rigidBody.print_body_frame();
