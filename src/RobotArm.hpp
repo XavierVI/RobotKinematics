@@ -23,7 +23,7 @@ template <int J> class RobotArm {
      * This function returns a transformation matrix which represents
      * the final pose of the arm.
      */
-    Eigen::Matrix4d forwardSpaceKin(Eigen::Vector<double, J> angles) {
+    Eigen::Matrix4d forwardKinSpace(Eigen::Vector<double, J> angles) {
       Eigen::Matrix4d T_sb = M;
       Eigen::ArithmeticSequence seq = Eigen::seq(0, 2);
 
@@ -51,11 +51,11 @@ template <int J> class RobotArm {
       return T_sb;
     }
 
-    void forwardBodyKin() {}
+    void forwardKinBody() {}
 
-    void inverseSpaceKin() {}
+    void inverseKinSpace() {}
 
-    void inverseBodyKin() {}
+    void inverseKinBody() {}
 
     void printSlist() {}
 };
