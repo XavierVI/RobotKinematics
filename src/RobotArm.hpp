@@ -1,5 +1,6 @@
 #include <Eigen/Dense>
 #include <iostream>
+#include <cmath> 
 
 // J is the number of joints
 template <int J> class RobotArm {
@@ -7,7 +8,7 @@ template <int J> class RobotArm {
     // we're going to represent each screw axis as
     // a row vector, which will make it easier to construct
     // the matrix representation
-    const Eigen::Matrix<double, J, 6> Slist;
+    Eigen::Matrix<double, J, 6> Slist;
     // this is the home configuration
     Eigen::Matrix4d M;
 
@@ -16,7 +17,7 @@ template <int J> class RobotArm {
      * given angle. It's pretty much a helper function for the
      * methods which compute forward kinematics.
      */
-    Eigen::Vector<double, 6> matrixExp6(Eigen::Vector<double, 6> screw_axis, double angle) {
+    Eigen::Matrix4d matrixExp6(Eigen::Vector<double, 6> screw_axis, double angle) {
       Eigen::Matrix4d mat_exp = Eigen::Matrix4d::Identity();
       
       Eigen::Vector3d omega = screw_axis.head<3>();
@@ -43,8 +44,8 @@ template <int J> class RobotArm {
         mat_exp.block<3, 1>(0, 3) = 
             (
               Eigen::Matrix3d::Identity()
-              + (1 - std::cos(angles[i])) * skew_symm_mat
-              + (angles[i] - std::sin(angle)) * skew_symm_mat_sr
+              + (1 - std::cos(angle)) * skew_symm_mat
+              + (angle - std::sin(angle)) * skew_symm_mat_sr
             ) * v;
       }
 
@@ -54,11 +55,11 @@ template <int J> class RobotArm {
 
       return mat_exp;
     }
-    
+
 
   public:
     // TODO: might be worthwhile to add a check which verifies
-    // the norm of the rotational component is 1 or 0.
+    // the norm of the angular velocity is 1 or 0.
     RobotArm(Eigen::Matrix4d M, Eigen::Matrix<double, J, 6> Slist) 
       : M(M), Slist(Slist) {}
 
@@ -74,7 +75,7 @@ template <int J> class RobotArm {
       Eigen::Matrix4d T_sb = M;
 
       for (int i = J - 1; i >= 0; i--) {
-        Eigen::Matrix4d mat_exp = matrixExp6Space(Slist.row(i), angles[i]);
+        Eigen::Matrix4d mat_exp = matrixExp6(Slist.row(i), angles[i]);
         T_sb = mat_exp * T_sb;
       }
 
@@ -86,7 +87,7 @@ template <int J> class RobotArm {
 
       for (int i = 0; i < J; i++) {
         Eigen::Vector<double, 6> B = M.inverse().adjoint() * Slist.row(i);
-        Eigen::Matrix4d mat_exp = matrixExp6Body(B, angles[i]);
+        Eigen::Matrix4d mat_exp = matrixExp6(B, angles[i]);
         T_bb =  T_bb * mat_exp;
       }
 
@@ -98,5 +99,8 @@ template <int J> class RobotArm {
 
     void inverseKinBody() {}
 
-    void printSlist() {}
+    void printSlist() {
+      std::cout << "Screw Axis List\n";
+      std::cout << Slist << std::endl;
+    }
 };
