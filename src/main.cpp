@@ -83,6 +83,10 @@ void test_robot_arm() {
   Eigen::Matrix4d T_sb = arm.forwardKinSpace(angles);
 
   std::cout << T_sb << std::endl;
+  
+  Eigen::Matrix4d T_bb = arm.forwardKinBody(angles);
+
+  std::cout << T_bb << std::endl;
 }
 
 

@@ -9,3 +9,7 @@ cmake ..
 cd ..
 cmake --build ./build
 cmake --install ./build
+
+if [ $1 == "run" ]; then
+  ./bin/main
+fi

@@ -56,6 +56,25 @@ template <int J> class RobotArm {
       return mat_exp;
     }
 
+    Eigen::Matrix<double, 6, 6> Ad(Eigen::Matrix4d T) {
+      Eigen::Matrix<double, 6, 6> Ad_T = Eigen::Matrix<double, 6, 6>::Zero();
+      Eigen::Vector3d p = T.block<3, 1>(0, 3);
+      Eigen::Matrix3d R = T.topLeftCorner<3, 3>();
+
+
+      Eigen::Matrix3d skew_symm_mat {
+        { 0,    -p(2),  p(1) },
+        { p(2), 0,     -p(0) },
+        {-p(1), p(0),   0    }
+      };
+
+      Ad_T.topLeftCorner<3, 3>() = R;
+      Ad_T.bottomRightCorner<3, 3>() = R;
+      Ad_T.bottomLeftCorner<3, 3>() = skew_symm_mat * R;
+
+      return Ad_T;
+    }
+
 
   public:
     // TODO: might be worthwhile to add a check which verifies
@@ -86,13 +105,13 @@ template <int J> class RobotArm {
       Eigen::Matrix4d T_bb = M;
 
       for (int i = 0; i < J; i++) {
-        Eigen::Vector<double, 6> B = M.inverse().adjoint() * Slist.row(i);
+        // screw axis relative to the base frame
+        Eigen::Vector<double, 6> B = Ad(M.inverse()) * Slist.row(i).transpose();
         Eigen::Matrix4d mat_exp = matrixExp6(B, angles[i]);
         T_bb =  T_bb * mat_exp;
       }
 
       return T_bb;
-
     }
 
     void inverseKinSpace() {}
