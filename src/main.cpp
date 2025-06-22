@@ -1,7 +1,6 @@
 #include "RigidBody.hpp"
 #include "RobotArm.hpp"
 
-
 void rotate_rigid_bodies() {
   //-----------------------------------------------
   // Example of a rotation for a planar rigid-body
