@@ -1,4 +1,5 @@
 #include <Eigen/Dense>
+#include <Eigen/SVD>
 #include <iostream>
 #include <cmath> 
 
@@ -11,6 +12,12 @@ template <int J> class RobotArm {
     Eigen::Matrix<double, J, 6> Slist;
     // this is the home configuration
     Eigen::Matrix4d M;
+
+    /*********************************************************************
+    *
+    *                      Helper Methods
+    * 
+    *********************************************************************/
 
     /**
      * This method computes a matrix exponential using Slist and a
@@ -75,6 +82,26 @@ template <int J> class RobotArm {
       return Ad_T;
     }
 
+    /**
+     * 
+     */
+    Eigen::Matrix<double, 3, J> jacobian_inv(Eigen::Vector<double, J> angles) {
+      Eigen::Matrix<double, 3, J> jacobian = Eigen::Matrix<double, 3, J>::Zero();
+      double h = 1e-6;
+
+      for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < J; j++) {
+          double modified_angles = angles;
+          modified_angles[j] += h;
+          jacobian(i, j) = (forwardKinSpace(modified_angles)(i, 3) 
+                            + forwardKinSpace(angles)(i, 3)) / h;
+        }
+      }
+
+      Eigen::JacobiSVD<Eigen::Matrix<double, 3, J> jacobian_svd(jacobian);
+      return jacobian_svd.inverse();
+    }
+
 
   public:
     // TODO: might be worthwhile to add a check which verifies
@@ -83,6 +110,12 @@ template <int J> class RobotArm {
       : M(M), Slist(Slist) {}
 
     
+    /*********************************************************************
+    *
+    *                      Forward Kinematics
+    * 
+    *********************************************************************/
+
     /**
      * The forward kinematics in the space frame are computed using
      * the terms exp(Slist[i] * angle[i]) for i = 0, ..., J-1.
@@ -114,7 +147,15 @@ template <int J> class RobotArm {
       return T_bb;
     }
 
-    void inverseKinSpace() {}
+    /*********************************************************************
+    *
+    *                       Inverse Kinematics
+    * 
+    *********************************************************************/
+
+    void inverseKinSpace() {
+
+    }
 
     void inverseKinBody() {}
 

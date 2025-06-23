@@ -1,3 +1,6 @@
+#include <memory>
+#include <iostream>
+
 #include "RigidBody.hpp"
 #include "RobotArm.hpp"
 
@@ -134,6 +137,7 @@ void start_sim() {
 
   // run main loop, target real-time simulation and 60 fps rendering
   while (!glfwWindowShouldClose(window)) {
+    std::cout << data->ctrl[0] << std::endl;
     // advance interactive simulation for 1/60 sec
     //  Assuming MuJoCo can simulate faster than real-time, which it usually can,
     //  this loop will finish on time for the next frame to be rendered at 60 fps.
