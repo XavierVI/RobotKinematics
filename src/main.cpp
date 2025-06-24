@@ -86,6 +86,8 @@ void test_robot_arm() {
   Eigen::Matrix4d T_bb = arm.forwardKinBody(angles);
 
   std::cout << T_bb << std::endl;
+
+  // arm.inverseKinSpace();
 }
 
 

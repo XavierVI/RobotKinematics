@@ -1,5 +1,6 @@
 #include <Eigen/Dense>
 #include <Eigen/SVD>
+#include <Eigen/Geometry>
 #include <iostream>
 #include <cmath> 
 
@@ -25,51 +26,47 @@ template <int J> class RobotArm {
      * methods which compute forward kinematics.
      */
     Eigen::Matrix4d matrixExp6(Eigen::Vector<double, 6> screw_axis, double angle) {
-      Eigen::Matrix4d mat_exp = Eigen::Matrix4d::Identity();
+      Eigen::Isometry3d mat_exp = Eigen::Isometry3d::Identity();
       
       Eigen::Vector3d omega = screw_axis.head<3>();
       Eigen::Vector3d v = screw_axis.tail<3>();
 
       if (omega.norm() == 1) {
+        Eigen::Matrix3d I = Eigen::Matrix3d::Identity();
         // computing the skew-symmetric representation
         // of omega
-        Eigen::Matrix3d skew_symm_mat {
+        Eigen::Matrix3d skew_mat {
           { 0,       -omega(2),  omega(1) },
           { omega(2), 0,         -omega(0)},
           {-omega(1), omega(0),  0        }
         };
 
-        Eigen::Matrix3d skew_symm_mat_sr = skew_symm_mat * skew_symm_mat;
-
-        // compute the orientation
-        mat_exp.topLeftCorner<3, 3>() = 
-            Eigen::Matrix3d::Identity() 
-              + std::sin(angle) * skew_symm_mat
-              + (1 - std::cos(angle)) * skew_symm_mat_sr;
+        // compute the orientation (we have to use linear,
+        // because it returns a writable version of R)
+        mat_exp.linear() = I + std::sin(angle) * skew_mat
+                              + (1 - std::cos(angle)) * skew_mat * skew_mat;
 
         // compute the position
-        mat_exp.block<3, 1>(0, 3) = 
-            (
-              Eigen::Matrix3d::Identity()
-              + (1 - std::cos(angle)) * skew_symm_mat
-              + (angle - std::sin(angle)) * skew_symm_mat_sr
-            ) * v;
+        mat_exp.translation() = (I + (1 - std::cos(angle)) * skew_mat
+                                + (angle - std::sin(angle)) 
+                                * skew_mat * skew_mat) * v;
       }
 
       else if (omega.norm() == 0) {
-        mat_exp.block<3, 1>(0, 3) = v * angle;
+        mat_exp.translation() = v * angle;
       }
 
-      return mat_exp;
+      return mat_exp.matrix();
     }
 
     Eigen::Matrix<double, 6, 6> Ad(Eigen::Matrix4d T) {
       Eigen::Matrix<double, 6, 6> Ad_T = Eigen::Matrix<double, 6, 6>::Zero();
-      Eigen::Vector3d p = T.block<3, 1>(0, 3);
-      Eigen::Matrix3d R = T.topLeftCorner<3, 3>();
+      Eigen::Isometry3d T_iso (T);
+      Eigen::Vector3d p = T_iso.translation();
+      Eigen::Matrix3d R = T_iso.rotation();
 
 
-      Eigen::Matrix3d skew_symm_mat {
+      Eigen::Matrix3d skew_mat {
         { 0,    -p(2),  p(1) },
         { p(2), 0,     -p(0) },
         {-p(1), p(0),   0    }
@@ -77,29 +74,71 @@ template <int J> class RobotArm {
 
       Ad_T.topLeftCorner<3, 3>() = R;
       Ad_T.bottomRightCorner<3, 3>() = R;
-      Ad_T.bottomLeftCorner<3, 3>() = skew_symm_mat * R;
+      Ad_T.bottomLeftCorner<3, 3>() = skew_mat * R;
 
       return Ad_T;
     }
 
     /**
-     * 
+     * This method computes the Jacobian of the robot arm.
      */
-    Eigen::Matrix<double, 3, J> jacobian_inv(Eigen::Vector<double, J> angles) {
-      Eigen::Matrix<double, 3, J> jacobian = Eigen::Matrix<double, 3, J>::Zero();
-      double h = 1e-6;
+    Eigen::Matrix<double, 6, J> jacobian(Eigen::Vector<double, J> angles) {
+      Eigen::Matrix<double, 6, J> jacobian = Eigen::Matrix<double, 6, J>::Zero();
+      Eigen::Matrix4d T_i = Eigen::Matrix4d::Identity();
 
-      for (int i = 0; i < 3; i++) {
-        for (int j = 0; j < J; j++) {
-          double modified_angles = angles;
-          modified_angles[j] += h;
-          jacobian(i, j) = (forwardKinSpace(modified_angles)(i, 3) 
-                            + forwardKinSpace(angles)(i, 3)) / h;
+      jacobian.col(0) = Slist.row(0);
+
+      for (int i = 1; i < J; i++) {
+        T_i = T_i * matrixExp6(Slist.row(i -1), angles(i - 1));
+        jacobian.col(i) = Ad(T_i) * Slist.row(i).transpose();
+      }
+      
+      return jacobian;
+    }
+
+    /**
+     * This method computes the pseudo inverse of a Jacobian matrix. The method used
+     * is to first use factorize the matrix using singular value decomposition U S V^T, then
+     * return the inverse V S_inv U^T
+     **/
+    Eigen::Matrix<double, J, 6> pseudo_jacobian(Eigen::Matrix<double, 6, J> jacobian) {
+      Eigen::Matrix<double, J, 6> sigma = Eigen::Matrix<double, J, 6>::Zero();
+      Eigen::JacobiSVD<Eigen::Matrix<double, 6, J>> svd(jacobian, Eigen::ComputeFullU | Eigen::ComputeFullV);
+      Eigen::VectorXd singular_values = svd.singularValues();
+      int n = singular_values.size();
+          
+      // invert sigma
+      for (int i = 0; i < n; i++) {
+        // set the diagonal to 0 for numerical stability
+        if (singular_values(i) <= 1e-6) {
+          sigma(i, i) = 0.0;
         }
+        else
+          sigma(i, i) = 1.0 / singular_values(i);
       }
 
-      Eigen::JacobiSVD<Eigen::Matrix<double, 3, J> jacobian_svd(jacobian);
-      return jacobian_svd.inverse();
+      return svd.matrixV() * sigma * svd.matrixU().transpose();
+    }
+
+    bool tolerance_satisfied(
+      Eigen::Matrix4d T1, Eigen::Matrix4d T2,
+      double position_tol, double orientation_tol
+    ) {
+      Eigen::Isometry3d T1_iso (T1);
+      Eigen::Isometry3d T2_iso (T2);
+      // Position difference (Euclidean distance)
+      double position_error = (T1_iso.translation() - T2_iso.translation()).norm();
+
+      // Orientation difference (angle between rotations)
+      Eigen::Matrix3d R1 = T1_iso.rotation();
+      Eigen::Matrix3d R2 = T2_iso.rotation();
+
+      Eigen::Matrix3d dR = R1.transpose() * R2;
+      Eigen::AngleAxisd angle_axis(dR);
+      double orientation_error = std::abs(angle_axis.angle());
+
+      return position_error <= position_tol &&
+              orientation_error <= orientation_tol;
     }
 
 
@@ -153,8 +192,36 @@ template <int J> class RobotArm {
     * 
     *********************************************************************/
 
-    void inverseKinSpace() {
+    Eigen::Vector<double, J> inverseKinSpace(
+      Eigen::Matrix4d T_sd,
+      Eigen::Vector<double, J> initial_guess,
+      int max_iters = 20,
+      double position_tol = 1e-3,
+      double orientation_tol = 1e-3
+    ) {
+      Eigen::Matrix4d T_sb = forwardKinSpace(initial_guess);
+      Eigen::Vector<double, J> angles = initial_guess;
+      bool tol_satisfied = tolerance_satisfied(
+        T_sd, T_sb, position_tol, orientation_tol
+      );
+      int i = 0;
 
+      while (i < max_iters && !tol_satisfied) {
+        // compute the Jacobian and its pseudo inverse
+        Eigen::Matrix<double, 6, J> j = jacobian(angles);
+        Eigen::Matrix<double, J, 6> j_inv = pseudo_jacobian(j);
+        
+        // update the angles using Newton-Raphson method
+        angles = angles - j_inv * T_sb;
+
+        // update current solution
+        T_sb = forwardKinSpace(angles);
+        tol_satisfied = tolerance_satisfied(
+          T_sd, T_sb, position_tol, orientation_tol
+        );
+      }
+
+      return T_sb;
     }
 
     void inverseKinBody() {}
