@@ -10,9 +10,9 @@ template <int J> class RobotArm {
     // we're going to represent each screw axis as
     // a row vector, which will make it easier to construct
     // the matrix representation
-    Eigen::Matrix<double, J, 6> Slist;
+    const Eigen::Matrix<double, J, 6> Slist;
     // this is the home configuration
-    Eigen::Matrix4d M;
+    const Eigen::Matrix4d M;
 
     /*********************************************************************
     *
@@ -24,7 +24,7 @@ template <int J> class RobotArm {
      * This method computes the skew symmetric matrix
      * representation of a vector v.
      */
-    Eigen::Matrix3d vector_to_skew_symm_mat(Eigen::Vector3d v) {
+    Eigen::Matrix3d vector_to_skew_symm_mat(const Eigen::Vector3d &v) {
       Eigen::Matrix3d skew_symm_matrix {
         { 0,    -v(2),  v(1) },
         { v(2), 0,     -v(0) },
@@ -37,7 +37,8 @@ template <int J> class RobotArm {
      * This method computes the the vector representation of a
      * skew symmetric matrix.
      */
-    Eigen::Vector3d skew_symm_mat_to_vector(Eigen::Matrix3d skew_symm_matrix) {
+    Eigen::Vector3d skew_symm_mat_to_vector(
+      const Eigen::Matrix3d &skew_symm_matrix) {
       Eigen::Vector3d v {
         skew_symm_matrix(2, 1),
         skew_symm_matrix(0, 2),
@@ -52,7 +53,10 @@ template <int J> class RobotArm {
      * given angle. It's pretty much a helper function for the
      * methods which compute forward kinematics.
      */
-    Eigen::Matrix4d matrixExp6(Eigen::Vector<double, 6> screw_axis, double angle) {
+    Eigen::Matrix4d matrixExp6(
+      const Eigen::Vector<double, 6> &screw_axis,
+      double angle
+    ) {
       Eigen::Isometry3d mat_exp = Eigen::Isometry3d::Identity();
       
       Eigen::Vector3d omega = screw_axis.head<3>();
@@ -84,7 +88,7 @@ template <int J> class RobotArm {
       return mat_exp.matrix();
     }
 
-    Eigen::Matrix<double, 6, 6> Ad(Eigen::Matrix4d T) {
+    Eigen::Matrix<double, 6, 6> Ad(const Eigen::Matrix4d &T) {
       Eigen::Matrix<double, 6, 6> Ad_T = Eigen::Matrix<double, 6, 6>::Zero();
       Eigen::Isometry3d T_iso (T);
       Eigen::Vector3d p = T_iso.translation();
@@ -109,7 +113,7 @@ template <int J> class RobotArm {
      * @param[out] theta: A double to store the magnitude of rotation.
      */
     void matrixLog6(
-      Eigen::Matrix4d T,
+      const Eigen::Matrix4d &T,
       Eigen::Vector<double, 6> &twist,
       double &theta
     ) {
@@ -134,7 +138,7 @@ template <int J> class RobotArm {
       // Computing the angular velocity
       else if (R.trace() == -1) {
         // set theta to pi
-        theta = std::numbers::pi_v<double>;
+        theta = std::numbers::pi;
 
         // choose a feasible solution
         if (R(2, 2) != -1) {
@@ -187,7 +191,7 @@ template <int J> class RobotArm {
      * @param angles: the angles of the robot arm
      * @return the Jacobian matrix of the robot arm
      */
-    Eigen::Matrix<double, 6, J> space_jacobian(Eigen::Vector<double, J> angles) {
+    Eigen::Matrix<double, 6, J> space_jacobian(const Eigen::Vector<double, J> &angles) {
       Eigen::Matrix<double, 6, J> jacobian = Eigen::Matrix<double, 6, J>::Zero();
       Eigen::Matrix4d T_i = Eigen::Matrix4d::Identity();
 
@@ -207,7 +211,8 @@ template <int J> class RobotArm {
      * @param jacobian: the Jacobian matrix to compute the pseudo inverse of
      * @return the inverse V S_inv U^T
      **/
-    Eigen::Matrix<double, J, 6> pseudo_inv_jacobian(Eigen::Matrix<double, 6, J> jacobian) {
+    Eigen::Matrix<double, J, 6> pseudo_inv_jacobian(
+      const Eigen::Matrix<double, 6, J> &jacobian) {
       Eigen::Matrix<double, J, 6> sigma = Eigen::Matrix<double, J, 6>::Zero();
       Eigen::JacobiSVD<Eigen::Matrix<double, 6, J>> svd(
         jacobian, Eigen::ComputeFullU | Eigen::ComputeFullV
@@ -271,7 +276,7 @@ template <int J> class RobotArm {
      * This function returns a transformation matrix which represents
      * the final pose of the arm.
      */
-    Eigen::Matrix4d forwardKinSpace(Eigen::Vector<double, J> angles) {
+    Eigen::Matrix4d forwardKinSpace(const Eigen::Vector<double, J> &angles) {
       Eigen::Matrix4d T_sb = M;
 
       for (int i = J - 1; i >= 0; i--) {
@@ -282,7 +287,7 @@ template <int J> class RobotArm {
       return T_sb;
     }
 
-    Eigen::Matrix4d forwardKinBody(Eigen::Vector<double, J> angles) {
+    Eigen::Matrix4d forwardKinBody(const Eigen::Vector<double, J> &angles) {
       Eigen::Matrix4d T_bb = M;
 
       for (int i = 0; i < J; i++) {
@@ -315,7 +320,7 @@ template <int J> class RobotArm {
      * 
      */
     void inverseKinSpace(
-      Eigen::Matrix4d T_sd,
+      const Eigen::Matrix4d &T_sd,
       Eigen::Vector<double, J> &angles,
       int max_iters = 20,
       double position_tol = 1e-3,
