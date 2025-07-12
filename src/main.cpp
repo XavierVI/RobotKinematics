@@ -78,16 +78,14 @@ void test_robot_arm() {
 
   // rotating the arm around z-axis
   Eigen::Vector<double, 5> angles 
-    {std::numbers::pi / 2, 0.0, 0.0, 0.0, 0.0};
+    {std::numbers::pi / 2.0, 0.0, 0.0, 0.0, 0.0};
   Eigen::Matrix4d T_sb = arm.forwardKinSpace(angles);
 
-  std::cout << "T_sb" << std::endl;
-  std::cout << T_sb << std::endl;
+  std::cout << "T_sb:\n" << T_sb << std::endl;
   
   Eigen::Matrix4d T_bb = arm.forwardKinBody(angles);
 
-  std::cout << "T_bb" << std::endl;
-  std::cout << T_bb << std::endl;
+  std::cout << "T_bb:\n" << T_bb << std::endl;
 
   std::cout << "Inverse kinematics" << std::endl;
   angles.setZero();
