@@ -67,12 +67,14 @@ template <int J> class RobotArm {
         // compute the orientation (we have to use linear,
         // because it returns a writable version of R)
         mat_exp.linear() = I + std::sin(angle) * skew_symm_matrix
-                              + (1 - std::cos(angle)) * skew_symm_matrix * skew_symm_matrix;
+                             + (1 - std::cos(angle)) 
+                             * skew_symm_matrix * skew_symm_matrix;
 
         // compute the position
-        mat_exp.translation() = (I + (1 - std::cos(angle)) * skew_symm_matrix
+        auto G = I*angle + (1 - std::cos(angle)) * skew_symm_matrix
                                 + (angle - std::sin(angle)) 
-                                * skew_symm_matrix * skew_symm_matrix) * v;
+                                * skew_symm_matrix * skew_symm_matrix;
+        mat_exp.translation() = G * v;
       }
 
       else if (omega.norm() == 0) {
@@ -332,7 +334,7 @@ template <int J> class RobotArm {
       while (i < max_iters && !tol_satisfied) {
         // compute the Jacobian and its pseudo inverse
         Eigen::Matrix<double, 6, J> space_j = space_jacobian(angles);
-        Eigen::Matrix<double, J, 6> j_inv = pseudo_inv_jacobian(space_j);
+        // Eigen::Matrix<double, J, 6> j_inv = pseudo_inv_jacobian(space_j);
         
         // compute the body twist
         Eigen::Vector<double, 6> twist;
@@ -342,6 +344,7 @@ template <int J> class RobotArm {
         Eigen::Vector<double, 6> spatial_twist = Ad(T_sb) * twist;
 
         // update the joint angles
+        // angles = angles + j_inv * spatial_twist;
         angles = angles + space_j.transpose() * spatial_twist;
 
         T_sb = forwardKinSpace(angles);
