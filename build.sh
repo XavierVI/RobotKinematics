@@ -12,4 +12,7 @@ cmake --install ./build
 
 if [ $1 == "run" ]; then
   ./bin/main
+
+elif [ $1 == "sim" ]; then
+  ./bin/sim
 fi
