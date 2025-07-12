@@ -97,22 +97,7 @@ void scroll(GLFWwindow* window, double xoffset, double yoffset) {
   mjv_moveCamera(model, mjMOUSE_ZOOM, 0, -0.05*yoffset, &scene, &camera);
 }
 
-
-void start_sim() {
-  char error[1000] = "Could not load scene.xml";
-  model = mj_loadXML("models/scene.xml", NULL, error, 1000);
-  
-  if (!model) {
-    mju_error("Load model error: %s", error);
-  }
-  
-  data = mj_makeData(model);
-
-  // init GLFW
-  if (!glfwInit()) {
-    mju_error("Could not initialize GLFW");
-  }
-
+GLFWwindow* initializeGLFW() {
   // create window, make OpenGL context current, request v-sync
   GLFWwindow* window = glfwCreateWindow(1200, 900, "Robot Arm Demo", NULL, NULL);
   glfwMakeContextCurrent(window);
@@ -133,17 +118,70 @@ void start_sim() {
   glfwSetCursorPosCallback(window, mouse_move);
   glfwSetMouseButtonCallback(window, mouse_button);
   glfwSetScrollCallback(window, scroll);
+
+  return window;
+}
+
+
+void start_sim() {
+  char error[1000] = "Could not load scene.xml";
+  model = mj_loadXML("models/scene.xml", NULL, error, 1000);
   
+  if (!model) {
+    mju_error("Load model error: %s", error);
+  }
+  
+  data = mj_makeData(model);
+
+  // init GLFW
+  if (!glfwInit()) {
+    mju_error("Could not initialize GLFW");
+  }
+  
+  GLFWwindow* window = initializeGLFW();
+
+  Eigen::Matrix4d M {
+    {1.0, 0.0, 0.0, 0.536494},
+    {0.0, 1.0, 0.0, 0.0     },
+    {0.0, 0.0, 1.0, 0.42705 },
+    {0.0, 0.0, 0.0, 1.0 }
+  };
+
+  Eigen::Matrix<double, 6, 6> Slist {
+    {0.0,   0.0,   1.0,      0.0,     0.0,     0.0  },
+    {0.0,   1.0,   0.0,   -0.12705,   0.0,     0.0  },
+    {0.0,   1.0,   0.0,   -0.42705,   0.0,     0.05955 },
+    {1.0,   0.0,   0.0,      0.0,   0.42705,   0.0 },
+    {0.0,   1.0,   0.0,   -0.42705,   0.0,     0.35955  },
+    {1.0,   0.0,   0.0,      0.0,   0.42705,   0.0  },
+  };
+
+  RobotArm<6> robotArm(M, Slist);
+
+  Eigen::Matrix4d T_desired {
+    {0.0, -1.0, 0.0, 0.4},
+    {1.0,  0.0, 0.0, 0.2},
+    {0.0,  0.0, 1.0, 0.5},
+    {0.0,  0.0, 0.0, 1.0}
+  };
+
+  Eigen::Vector<double, 6> angles {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+
+  robotArm.inverseKinSpace(
+    T_desired, angles
+  );
 
   // run main loop, target real-time simulation and 60 fps rendering
   while (!glfwWindowShouldClose(window)) {
-    std::cout << data->ctrl[0] << std::endl;
+    for (int i = 0; i < 6; i++) {
+      data->ctrl[i] = angles(i);
+    }
     // advance interactive simulation for 1/60 sec
     //  Assuming MuJoCo can simulate faster than real-time, which it usually can,
     //  this loop will finish on time for the next frame to be rendered at 60 fps.
     //  Otherwise add a cpu timer and exit this loop when it is time to render.
     mjtNum simstart = data->time;
-    while (data->time - simstart < 1.0/60.0) {
+    while (data->time - simstart < 1.0 / 60.0) {
       mj_step(model, data);
     }
 

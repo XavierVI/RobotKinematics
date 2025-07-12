@@ -301,8 +301,7 @@ template <int J> class RobotArm {
 
     /**
      * This method computes the inverse kinematics of the robot arm
-     * in the space frame. It uses the Newton-Raphson method to iteratively
-     * find the angles that satisfy the desired end-effector pose T_sd.
+     * in the space frame.
      * 
      * @param T_sd: The desired end-effector pose in the space frame.
      * @param[out] angles: This is the initial guess for the 
@@ -342,8 +341,8 @@ template <int J> class RobotArm {
         // compute the spatial twist
         Eigen::Vector<double, 6> spatial_twist = Ad(T_sb) * twist;
 
-        // update the angles using Newton-Raphson method
-        angles = angles + j_inv * spatial_twist;
+        // update the joint angles
+        angles = angles + space_j.transpose() * spatial_twist;
 
         T_sb = forwardKinSpace(angles);
 
